@@ -55,7 +55,7 @@ jobs:
           python3 -m pip install types-redis
       - name: Check src
         run: |
-          mypy --ignore-missing-imports ./broker
+          mypy --ignore-missing-imports ./notifications_api
 
   notify_telegram:
     runs-on: ubuntu-latest
