@@ -1,0 +1,24 @@
+@startuml
+skinparam monochrome reverse
+
+==Immediate notifications==
+
+Client -> Api_service: Send event
+activate Api_service
+Api_service -> RabbitMQ: Add event to the queue
+activate RabbitMQ
+Worker -> RabbitMQ: Read event from queue
+activate Worker
+Worker -> SMTP_server_Sendgrid: Send notification
+
+==Periodical notifications==
+
+Client -> Api_service: Send periodic event
+Api_service -> PostgreSQL: Save periodic event
+activate PostgreSQL
+Api_service -> RabbitMQ: Scheduler creates events every n times
+Worker -> RabbitMQ: Read event from queue
+Worker -> SMTP_server_Sendgrid: Send notification
+Worker -> PostgreSQL: Save notification that was sent
+deactivate PostgreSQL
+@enduml

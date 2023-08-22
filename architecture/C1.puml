@@ -1,0 +1,25 @@
+@startuml
+skinparam componentStyle uml2
+skinparam monochrome reverse
+
+actor Client
+component API_service
+component RabbitMq
+component SMTP_server_Sendgrid
+database Postgres
+component Worker
+component Scheduler
+component Marketing_Admin_Panel
+
+Client -right-> API_service: Send event
+
+API_service -right-> RabbitMq: Add event to the queue
+API_service -right-> Postgres: Save immediate event
+Scheduler -up--> RabbitMq: Add event to the queue
+Scheduler -up--> Postgres: Save periodic event
+
+Worker -left-> RabbitMq: Read event from queue
+Worker -> SMTP_server_Sendgrid: Send notification
+Marketing_Admin_Panel -down-> SMTP_server_Sendgrid: Send notification
+
+@enduml
