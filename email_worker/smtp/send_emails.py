@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 message = Mail(
     from_email=f'{os.environ.get("FROM_EMAIL")}',
-    to_emails='to@example.com',
+    to_emails=f'{os.environ.get("FROM_EMAIL")}',
     subject='Sending with Twilio SendGrid is Fun',
     html_content='<strong>and easy to do anywhere, even with Python</strong>')
 try:
