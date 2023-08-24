@@ -46,9 +46,9 @@ class Rabbit:
         :param correlation_id:
         :return:
         """
-        queue = await self.channel.declare_queue(
+        queue = await self.channel.declare_queue(  # type: ignore[union-attr]
             self.queue_name,
-            durable=True)  # type: ignore[union-attr]
+            durable=True)
         await queue.bind(self.exchange, routing_key=routing_key)
 
         message = Message(
@@ -57,9 +57,9 @@ class Rabbit:
             correlation_id=correlation_id,
             delivery_mode=DeliveryMode.PERSISTENT
         )
-        await self.exchange.publish(message,
+        await self.exchange.publish(message,  # type: ignore[union-attr]
                                     routing_key,
-                                    timeout=10)  # type: ignore[union-attr]
+                                    timeout=10)
 
     async def close(self):
         if self.channel:
