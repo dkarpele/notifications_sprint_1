@@ -6,9 +6,9 @@ services:
     privileged: true
     env_file:
       - .env
-#    environment:
-#      - RABBITMQ_DEFAULT_USER=${RABBIT_USER}
-#      - RABBITMQ_DEFAULT_PASS=${RABBIT_PASS}
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBIT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBIT_PASS}
     ports:
       - 5672:5672
       - 15672:15672

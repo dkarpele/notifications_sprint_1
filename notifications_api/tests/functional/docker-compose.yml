@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  fastapi:
+    build: ../../src/.
+    image: fastapi-image
+    container_name: fastapi
+    privileged: true
+    env_file:
+      - .env
+    networks:
+      - backend
+    expose:
+      - "8000"
+    volumes:
+      - ./../../tests:/${APP_HOME}/tests
+
+  tests:
+    image: fastapi-image
+    container_name: tests
+    privileged: true
+    env_file:
+      - .env
+    networks:
+      - backend
+    depends_on:
+      - fastapi
+    entrypoint: ${APP_HOME}/entrypoint.sh
+    volumes:
+      - ./../../tests:/${APP_HOME}/tests
+
+networks:
+  backend:
