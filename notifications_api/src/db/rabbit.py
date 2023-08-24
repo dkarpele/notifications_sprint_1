@@ -34,10 +34,10 @@ class Rabbit:
         )
 
     async def produce(
-        self,
-        routing_key: str,
-        data: dict,
-        correlation_id,
+            self,
+            routing_key: str,
+            data: dict,
+            correlation_id,
     ) -> None:
         """
         Send data to queue according to routing key
@@ -46,7 +46,9 @@ class Rabbit:
         :param correlation_id:
         :return:
         """
-        queue = await self.channel.declare_queue(self.queue_name, durable=True)
+        queue = await self.channel.declare_queue(
+            self.queue_name,
+            durable=True)  # type: ignore[union-attr]
         await queue.bind(self.exchange, routing_key=routing_key)
 
         message = Message(
@@ -55,7 +57,9 @@ class Rabbit:
             correlation_id=correlation_id,
             delivery_mode=DeliveryMode.PERSISTENT
         )
-        await self.exchange.publish(message, routing_key, timeout=10)
+        await self.exchange.publish(message,
+                                    routing_key,
+                                    timeout=10)  # type: ignore[union-attr]
 
     async def close(self):
         if self.channel:
