@@ -3,7 +3,7 @@ import logging
 import orjson
 
 from aio_pika import DeliveryMode, Exchange, ExchangeType, connect_robust
-from aio_pika.abc import AbstractChannel, AbstractQueue
+from aio_pika.abc import AbstractQueue
 from aio_pika.channel import Channel
 from aio_pika.connection import Connection
 from aio_pika.message import Message
