@@ -16,6 +16,3 @@ async def user_welcome(user: RequestUserModel,
     await broker.produce(routing_key='user-reporting.v1.registered',
                          data=jsonable_encoder(user),
                          correlation_id=user.user_id)
-    await broker.produce(routing_key='one-more-routing-key',
-                         data=jsonable_encoder(user),
-                         correlation_id=user.user_id)
