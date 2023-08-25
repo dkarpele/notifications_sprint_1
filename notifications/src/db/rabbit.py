@@ -76,7 +76,8 @@ class Rabbit:
         """
 
         # Creating channel
-        self.channel: AbstractChannel = await self.connection.channel()
+        self.channel = \
+            await self.connection.channel()  # type: ignore[union-attr]
 
         self.exchange = await self.channel.declare_exchange(
             self.topic_name,
@@ -84,7 +85,7 @@ class Rabbit:
         )
 
         # Declaring queue
-        self.queue: AbstractQueue = await self.channel.declare_queue(
+        self.queue = await self.channel.declare_queue(
             self.queue_name,
             durable=True)
         await self.queue.bind(self.exchange, routing_key=routing_key)
