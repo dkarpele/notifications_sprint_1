@@ -15,6 +15,7 @@ class Rabbit:
         self.exchange: Exchange | None = None
         self.topic_name: str | None = None
         self.queue_name: str | None = None
+        self.queue: AbstractQueue | None = None
 
     async def connect(self,
                       url: str,
@@ -36,22 +37,24 @@ class Rabbit:
         :param routing_key:
         :return:
         """
+
+        # Creating channel
+        self.channel: AbstractChannel = await self.connection.channel()
+
+        self.exchange = await self.channel.declare_exchange(
+            self.topic_name,
+            ExchangeType.TOPIC
+        )
+
+        # Declaring queue
+        self.queue: AbstractQueue = await self.channel.declare_queue(
+            self.queue_name,
+            durable=True)
+        await self.queue.bind(self.exchange, routing_key=routing_key)
+
+    async def iterate(self):
         async with self.connection:
-            # Creating channel
-            self.channel: AbstractChannel = await self.connection.channel()
-
-            self.exchange = await self.channel.declare_exchange(
-                self.topic_name,
-                ExchangeType.TOPIC
-            )
-
-            # Declaring queue
-            queue: AbstractQueue = await self.channel.declare_queue(
-                self.queue_name,
-                durable=True)
-            await queue.bind(self.exchange, routing_key=routing_key)
-
-            async with queue.iterator() as queue_iter:
+            async with self.queue.iterator() as queue_iter:
                 # Cancel consuming after __aexit__
                 async for message in queue_iter:
                     async with message.process():
@@ -59,7 +62,7 @@ class Rabbit:
                         logging.info(message)
                         logging.info(orjson.loads(message.body))
 
-                        if queue.name in message.body.decode():
+                        if self.queue.name in message.body.decode():
                             break
 
     async def close(self):

@@ -16,6 +16,8 @@ async def main():
     await rabbit.consume(routing_key="user-reporting.v1.registered")
     await rabbit.consume(routing_key="one-more-routing-key")
 
+    await rabbit.iterate()
+
 if __name__ == "__main__":
     logging.info('Starting consumer...')
     asyncio.run(main())
