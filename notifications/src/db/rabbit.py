@@ -1,7 +1,9 @@
 import asyncio
-
+import logging
 import orjson
+
 from aio_pika import DeliveryMode, Exchange, ExchangeType, connect_robust
+from aio_pika.abc import AbstractChannel, AbstractQueue
 from aio_pika.channel import Channel
 from aio_pika.connection import Connection
 from aio_pika.message import Message
@@ -14,6 +16,7 @@ class Rabbit:
         self.exchange: Exchange | None = None
         self.topic_name: str | None = None
         self.queue_name: str | None = None
+        self.queue: AbstractQueue | None = None
 
     async def connect(self,
                       url: str,
@@ -28,10 +31,11 @@ class Rabbit:
 
         self.channel = await self.connection.channel()
 
-        self.exchange = await self.channel.declare_exchange(
-            self.topic_name,
-            ExchangeType.TOPIC
-        )
+        self.exchange = \
+            await self.channel.declare_exchange(  # type: ignore[union-attr]
+                self.topic_name,
+                ExchangeType.TOPIC
+            )
 
     async def produce(
             self,
@@ -61,7 +65,46 @@ class Rabbit:
                                     routing_key,
                                     timeout=10)
 
+    async def consume(
+            self,
+            routing_key: str,
+    ):
+        """
+        Send data to queue according to routing key
+        :param routing_key:
+        :return:
+        """
+
+        # Creating channel
+        self.channel: AbstractChannel = await self.connection.channel()
+
+        self.exchange = await self.channel.declare_exchange(
+            self.topic_name,
+            ExchangeType.TOPIC
+        )
+
+        # Declaring queue
+        self.queue: AbstractQueue = await self.channel.declare_queue(
+            self.queue_name,
+            durable=True)
+        await self.queue.bind(self.exchange, routing_key=routing_key)
+
+    async def iterate(self):
+        async with self.connection:
+            async with self.queue.iterator() as queue_iter:
+                # Cancel consuming after __aexit__
+                logging.info(f'Listening queue {self.queue_name} ...')
+                async for message in queue_iter:
+                    async with message.process():
+                        logging.info('Message arrived.')
+                        logging.info(message)
+                        logging.info(orjson.loads(message.body))
+
+                        if self.queue.name in message.body.decode():
+                            break
+
     async def close(self):
+        logging.info('Closing all connections to rabbit...')
         if self.channel:
             await self.channel.close()
         if self.connection:
