@@ -11,6 +11,7 @@ async def startup_consumer():
     await rabbit.connect(rabbit_settings.get_amqp_uri(),
                          queue_name='email_worker')
     await rabbit.consume(routing_key="user-reporting.v1.registered")
+    await rabbit.consume(routing_key="user-reporting.v1.likes-for-reviews")
     try:
         await rabbit.iterate()
     except Exception:
