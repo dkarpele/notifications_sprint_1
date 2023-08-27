@@ -6,13 +6,10 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 
 from api.v1 import notify_email
-from core.config import settings, rabbit_settings
+from core.config import settings, rabbit_settings, cron_settings
 from core.logger import LOGGING
 from db import rabbit, scheduler
 from schedule.notifications import likes_for_reviews
-
-
-# sentry_sdk.init(integrations=[FastApiIntegration()])
 
 
 async def startup():
@@ -20,16 +17,12 @@ async def startup():
     await rabbit.rabbit.connect(rabbit_settings.get_amqp_uri(),
                                 queue_name='email_worker')
     job = await scheduler.get_scheduler()
+
     job.add_job(likes_for_reviews,
-                args=(),
-                trigger='interval',
-                seconds=3)
-    # job.add_job(likes_for_reviews,
-    #             trigger='cron',
-    #             hour=cron_settings.likes_for_reviews['hour'],
-    #             minute=cron_settings.likes_for_reviews['minute'],
-    #             second=cron_settings.likes_for_reviews['second'],
-    #             timezone=cron_settings.likes_for_reviews['timezone'])
+                trigger='cron',
+                hour=cron_settings.likes_for_reviews['hour'],
+                minute=cron_settings.likes_for_reviews['minute'],
+                timezone=cron_settings.likes_for_reviews['timezone'])
 
     job.start()
 

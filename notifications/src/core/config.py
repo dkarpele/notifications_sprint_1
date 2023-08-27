@@ -20,6 +20,8 @@ class Settings(MainConf):
     port: int = Field(..., env='PORT_NOTIFICATION_API')
     host_auth: str = Field(..., env='HOST_AUTH')
     port_auth: int = Field(..., env='PORT_AUTH')
+    host_ugc: str = Field(..., env='HOST_UGC')
+    port_ugc: int = Field(..., env='PORT_UGC')
 
 
 settings = Settings()
@@ -54,9 +56,9 @@ rabbit_settings = RabbitCreds()
 
 class CronSettings:
     likes_for_reviews: dict = {
-        'hour': 19,
+        'hour': 18,
         'minute': 45,
-        'second': 20,
+        'second': 00,
         'timezone': 'UTC'
     }
 
