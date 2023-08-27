@@ -50,3 +50,15 @@ class RabbitCreds(MainConf):
 
 
 rabbit_settings = RabbitCreds()
+
+
+class CronSettings:
+    likes_for_reviews: dict = {
+        'hour': 19,
+        'minute': 45,
+        'second': 20,
+        'timezone': 'UTC'
+    }
+
+
+cron_settings = CronSettings()
