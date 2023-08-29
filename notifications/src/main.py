@@ -49,8 +49,8 @@ app = FastAPI(
     lifespan=lifespan, )
 
 app.include_router(notify_email.router,
-                   prefix='/api/v1/notify_email',
-                   tags=['notify_email'])
+                   prefix='/api/v1/notify-email',
+                   tags=['notify-email'])
 
 if __name__ == '__main__':
     uvicorn.run(
