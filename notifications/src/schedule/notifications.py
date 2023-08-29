@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import datetime
 
@@ -20,10 +21,10 @@ async def likes_for_reviews():
     data: dict = await users_daily_likes()
     correlation_id = round(time.time())
 
-    # if not data:
-    #     logging.info('If 0 users received 0 likes - don\'t need to send any'
-    #                  ' notifications. Exiting')
-    #     return
+    if not data:
+        logging.info('If 0 users received 0 likes - don\'t need to send any'
+                     ' notifications. Exiting.')
+        return
 
     # Add initial notification to db
     try:
