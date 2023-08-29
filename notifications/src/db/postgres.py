@@ -31,6 +31,9 @@ postgres: Postgres | None = None
 
 # Функция понадобится при внедрении зависимостей
 # Dependency
-async def get_session() -> AsyncSession:
-    async with postgres.async_session() as session:
-        return session
+async def get_session() -> AsyncSession | None:
+    if postgres:
+        async with postgres.async_session() as session:
+            return session
+    else:
+        return None
