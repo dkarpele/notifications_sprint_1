@@ -51,14 +51,25 @@ class RabbitCreds(MainConf):
                 f":{self.rabbit_port}/"
 
 
-rabbit_settings = RabbitCreds()
+amqp_settings = RabbitCreds()
+
+
+class DBCreds(MainConf):
+    dbname: str = Field(..., env="DB_NAME")
+    user: str = Field(..., env="DB_USER")
+    password: str = Field(..., env="DB_PASSWORD")
+    host: str = Field(env="DB_HOST", default='127.0.0.1')
+    port: int = Field(env="DB_PORT", default=5432)
+
+
+db_settings = DBCreds()
 
 
 class CronSettings:
     likes_for_reviews: dict = {
-        'hour': 18,
-        'minute': 45,
-        'second': 00,
+        'hour': 19,
+        'minute': 38,
+        'second': 25,
         'timezone': 'UTC'
     }
 

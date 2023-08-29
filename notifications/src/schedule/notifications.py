@@ -1,21 +1,54 @@
-import aiohttp
 import time
+from datetime import datetime
 
+import aiohttp
 from aiohttp.web_exceptions import HTTPException
 from fastapi import status as st
+from sqlalchemy.exc import SQLAlchemyError
 
 import core.config as conf
-from services.connections import get_broker
+from models.schemas import Notification, NotificationContent
+from services.connections import get_broker, get_db, DbHelpers
+from services.exceptions import db_bad_request
 
 routing_key = 'user-reporting.v1.likes-for-reviews'
 
 
 async def likes_for_reviews():
+    db = await get_db()
+    conn = DbHelpers(db)
+    data: dict = await users_daily_likes()
+    correlation_id = round(time.time())
+
+    # if not data:
+    #     logging.info('If 0 users received 0 likes - don\'t need to send any'
+    #                  ' notifications. Exiting')
+    #     return
+
+    # Add initial notification to db
+    try:
+        await conn.insert(Notification(str(correlation_id),
+                                       'Initiated'))
+        await conn.insert(NotificationContent(str(correlation_id),
+                                              str(data)))
+    except SQLAlchemyError as err:
+        raise db_bad_request(err)
+
+    # Produce message to the queue
     broker = await get_broker()
-    data = await users_daily_likes()
     await broker.produce(routing_key=routing_key,
                          data=data,
-                         correlation_id=round(time.time()))
+                         correlation_id=correlation_id)
+
+    # Update notification status in DB after producing message
+    try:
+        await conn.update(model=Notification,
+                          model_column=Notification.content_id,
+                          column_value=str(correlation_id),
+                          update_values={'status': 'Produced',
+                                         'modified': datetime.utcnow()})
+    except SQLAlchemyError as err:
+        raise db_bad_request(err)
 
 
 async def users_daily_likes() -> dict:

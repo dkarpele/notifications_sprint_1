@@ -64,6 +64,8 @@ class Rabbit:
         await self.exchange.publish(message,  # type: ignore[union-attr]
                                     routing_key,
                                     timeout=10)
+        logging.info(f'Published to queue {self.queue_name}. with routing_key'
+                     f' {routing_key}.')
 
     async def consume(
             self,
