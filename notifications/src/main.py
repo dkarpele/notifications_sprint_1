@@ -10,6 +10,7 @@ from core.config import settings, amqp_settings, cron_settings, db_settings
 from core.logger import LOGGING
 from db import rabbit as amqp, scheduler, postgres as db
 from schedule.notifications import likes_for_reviews
+from tasks import jobs
 
 
 async def startup():
@@ -27,12 +28,7 @@ async def startup():
 
     # Connecting to scheduler
     job = await scheduler.get_scheduler()
-    job.add_job(likes_for_reviews,
-                trigger='cron',
-                hour=cron_settings.likes_for_reviews['hour'],
-                minute=cron_settings.likes_for_reviews['minute'],
-                second=cron_settings.likes_for_reviews['second'],
-                timezone=cron_settings.likes_for_reviews['timezone'])
+    await jobs(job)
     job.start()
 
 
