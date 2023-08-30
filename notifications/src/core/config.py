@@ -67,9 +67,9 @@ db_settings = DBCreds()
 
 class CronSettings:
     likes_for_reviews: dict = {
-        'hour': 19,
-        'minute': 38,
-        'second': 25,
+        'hour': 15,
+        'minute': 42,
+        'second': 30,
         'timezone': 'UTC'
     }
 

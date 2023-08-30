@@ -6,10 +6,9 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 
 from api.v1 import notify_email
-from core.config import settings, amqp_settings, cron_settings, db_settings
+from core.config import settings, amqp_settings, db_settings
 from core.logger import LOGGING
 from db import rabbit as amqp, scheduler, postgres as db
-from schedule.notifications import likes_for_reviews
 from tasks import jobs
 
 

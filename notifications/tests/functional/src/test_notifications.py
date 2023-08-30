@@ -1,11 +1,8 @@
 import uuid
-
-import aiohttp
-import pytest
-
 from http import HTTPStatus
 from logging import config as logging_config
 
+import pytest
 from tests.functional.settings import settings
 from tests.functional.utils.logger import LOGGING
 
