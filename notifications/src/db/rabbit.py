@@ -8,8 +8,10 @@ from aio_pika.channel import Channel
 from aio_pika.connection import Connection
 from aio_pika.message import Message
 
+from db import AbstractQueueInternal
 
-class Rabbit:
+
+class Rabbit(AbstractQueueInternal):
     def __init__(self) -> None:
         self.connection: Connection | None = None
         self.channel: Channel | None = None
@@ -117,5 +119,5 @@ class Rabbit:
 rabbit: Rabbit | None = None
 
 
-async def get_rabbit() -> Rabbit | None:
+async def get_rabbit() -> AbstractQueueInternal | None:
     return rabbit

@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
-from typing import Any, Coroutine
+from typing import Any
 
 from sqlalchemy import Result, and_
 from sqlalchemy.exc import SQLAlchemyError
 
+from db import AbstractQueueInternal
 from models.schemas import Notification, NotificationContent
-from services.connections import get_db, DbHelpers, BrokerDep
+from services.connections import get_db, DbHelpers
 from services.exceptions import db_bad_request
 
 
@@ -35,7 +36,7 @@ async def process_notifications_helper(status: str,
 
 
 async def initiate_notification_helper(db_conn: DbHelpers,
-                                       broker: Coroutine | BrokerDep,
+                                       broker: AbstractQueueInternal,
                                        correlation_id: str,
                                        routing_key: str,
                                        data: dict) -> None:

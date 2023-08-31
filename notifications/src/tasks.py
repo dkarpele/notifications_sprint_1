@@ -1,7 +1,7 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from core.config import cron_settings
-from schedule.notifications import likes_for_reviews,\
+from schedule.notifications import likes_for_reviews, \
     process_initiated_notifications, process_produced_notifications
 
 

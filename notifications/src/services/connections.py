@@ -4,16 +4,17 @@ from fastapi import Depends
 from sqlalchemy import update, select, Result
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db import AbstractQueueInternal
 from db.postgres import get_session, Base
-from db.rabbit import Rabbit, get_rabbit
+from db.rabbit import get_rabbit
 from services.postgres import get_postgres
 from services.rabbit import get_rabbit_service
 
-BrokerDep = Annotated[Rabbit, Depends(get_rabbit_service)]
+BrokerDep = Annotated[AbstractQueueInternal, Depends(get_rabbit_service)]
 DbDep = Annotated[AsyncSession, Depends(get_postgres)]
 
 
-async def get_broker():
+async def get_broker() -> AbstractQueueInternal:
     res = await get_rabbit()
     return res
 
