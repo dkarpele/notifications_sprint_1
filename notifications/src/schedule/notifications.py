@@ -18,6 +18,11 @@ from services.helpers import process_notifications_helper, \
 routing_key = 'user-reporting.v1.likes-for-reviews'
 
 
+def success_message(status: str):
+    return logging.info(f'No messages left in {status} state. Everything is'
+                        f' good.')
+
+
 async def likes_for_reviews():
     """
     Produces message that will be scheduled:
@@ -93,10 +98,10 @@ async def process_initiated_notifications():
     """
     db = await get_db()
     conn = DbHelpers(db)
-    unprocessed = await process_notifications_helper('Initiated', 15)
+    status = 'Initiated'
+    unprocessed = await process_notifications_helper(status, 15)
     if not unprocessed:
-        logging.info('No messages left in `Initiated` state. Everything is '
-                     'good.')
+        success_message(status)
     else:
         for notification in unprocessed:
             notification_dict = jsonable_encoder(*notification)
@@ -147,16 +152,32 @@ async def process_produced_notifications():
     Process unfinished notifications in Produced state
     :return:
     """
-    unprocessed = await process_notifications_helper('Produced', 10)
+    status = 'Produced'
+    unprocessed = await process_notifications_helper(status, 10)
     if not unprocessed:
-        logging.info('No messages left in `Produced` state. Everything is '
-                     'good.')
+        success_message(status)
     else:
         for notification in unprocessed:
             notification_dict = jsonable_encoder(*notification)
             id_: str = notification_dict['id']
             content_id: str = notification_dict['content_id']
-            logging.warning(f'Achtung!!1 The message is in Produced state'
+            logging.warning(f'Achtung!!1 The message stays in {status} state'
                             f' too long! Take action immediately!\n'
                             f'id: {id_}\n'
                             f'content_id {content_id}')
+
+
+async def process_consumed_notifications():
+    """
+    Process unfinished notifications in Consumed state
+    :return:
+    """
+    status = 'Consumed'
+    unprocessed = await process_notifications_helper(status,
+                                                     10)
+    if not unprocessed:
+        success_message(status)
+    else:
+        ...
+        # send message via smtp again
+        # don't forget to check idempotency before sending

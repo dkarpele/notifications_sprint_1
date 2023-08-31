@@ -76,6 +76,9 @@ class CronSettings:
     process_produced_notifications: dict = {
         'minute': 5,
     }
+    process_consumed_notifications: dict = {
+        'minute': 5,
+    }
 
 
 cron_settings = CronSettings()
