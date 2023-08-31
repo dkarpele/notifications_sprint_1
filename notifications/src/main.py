@@ -1,8 +1,11 @@
 import logging
+import uuid
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from asgi_correlation_id import CorrelationIdMiddleware
+from asgi_correlation_id.middleware import is_valid_uuid4
+from fastapi import FastAPI, Request, status
 from fastapi.responses import ORJSONResponse
 
 from api.v1 import notify_email
@@ -29,6 +32,7 @@ async def startup():
     job = await scheduler.get_scheduler()
     await jobs(job)
     job.start()
+    logging.info(f'List of scheduled jobs: {job.get_jobs()}')
 
 
 async def shutdown():
@@ -53,6 +57,25 @@ app = FastAPI(
     openapi_url='/api/openapi-notify.json',
     default_response_class=ORJSONResponse,
     lifespan=lifespan, )
+
+app.add_middleware(
+    CorrelationIdMiddleware,
+    header_name='X-Request-ID',
+    update_request_header=True,
+    generator=lambda: uuid.uuid4().hex,
+    validator=is_valid_uuid4,
+    transformer=lambda a: a,
+)
+
+
+@app.middleware('http')
+async def before_request(request: Request, call_next):
+    response = await call_next(request)
+    request_id = request.headers.get('X-Request-Id')
+    if not request_id:
+        return ORJSONResponse(status_code=status.HTTP_400_BAD_REQUEST,
+                              content={'detail': 'X-Request-Id is required'})
+    return response
 
 app.include_router(notify_email.router,
                    prefix='/api/v1/notify-email',

@@ -18,8 +18,6 @@ class MainConf(BaseSettings):
 class Settings(MainConf):
     host: str = Field(..., env='HOST_NOTIFICATION_API')
     port: int = Field(..., env='PORT_NOTIFICATION_API')
-    host_auth: str = Field(..., env='HOST_AUTH')
-    port_auth: int = Field(..., env='PORT_AUTH')
     host_ugc: str = Field(..., env='HOST_UGC')
     port_ugc: int = Field(..., env='PORT_UGC')
 
@@ -67,10 +65,13 @@ db_settings = DBCreds()
 
 class CronSettings:
     likes_for_reviews: dict = {
-        'hour': 15,
-        'minute': 42,
-        'second': 30,
+        'hour': 14,
+        'minute': 39,
+        'second': 55,
         'timezone': 'UTC'
+    }
+    process_notifications: dict = {
+        'minute': 10,
     }
 
 

@@ -24,9 +24,10 @@ def upgrade() -> None:
         Notification.id.expression,
         Notification.content_id.expression,
         Notification.status.expression,
+        Notification.last_notification_send.expression,
+        Notification.failures.expression,
         Notification.created_at.expression,
         Notification.modified.expression,
-        Notification.last_notification_send.expression,
     )
 
     op.create_table(

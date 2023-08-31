@@ -22,10 +22,10 @@ async def user_welcome(user: RequestUserModel,
     conn = DbHelpers(db)
     # Add initial notification to db
     try:
-        await conn.insert(Notification(str(user.user_id),
-                                       'Initiated'))
         await conn.insert(NotificationContent(str(user.user_id),
                                               str(jsonable_encoder(user))))
+        await conn.insert(Notification(str(user.user_id),
+                                       'Initiated'))
     except SQLAlchemyError as err:
         raise db_bad_request(err)
 

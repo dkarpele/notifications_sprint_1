@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from passlib.context import CryptContext
-from sqlalchemy import Column, DateTime, String, ForeignKey
+from sqlalchemy import Column, DateTime, String, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -23,6 +23,7 @@ class Notification(Base):
     status = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     modified = Column(DateTime, default=datetime.utcnow)
+    failures = Column(Integer, default=0)
     last_notification_send = Column(DateTime, default=None)
 
     contents = relationship('NotificationContent',
@@ -31,9 +32,11 @@ class Notification(Base):
     def __init__(self,
                  content_id: str,
                  status: str,
+                 failures: int = 0,
                  last_notification_send: datetime | None = None) -> None:
         self.content_id = content_id
         self.status = status
+        self.failures = failures
         self.modified = datetime.utcnow()
         self.last_notification_send = last_notification_send
 
