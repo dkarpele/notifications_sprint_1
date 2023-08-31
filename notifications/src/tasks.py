@@ -1,8 +1,8 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from core.config import cron_settings
-from schedule.notifications import (likes_for_reviews,
-                                    process_initiated_notifications)
+from schedule.notifications import likes_for_reviews,\
+    process_initiated_notifications, process_produced_notifications
 
 
 async def jobs(job: AsyncIOScheduler) -> None:
@@ -20,4 +20,8 @@ async def jobs(job: AsyncIOScheduler) -> None:
 
     job.add_job(process_initiated_notifications,
                 trigger='interval',
-                minute=cron_settings.process_notifications['minute'],)
+                minute=cron_settings.process_initiated_notifications['minute'])
+
+    job.add_job(process_produced_notifications,
+                trigger='interval',
+                minute=cron_settings.process_produced_notifications['minute'])

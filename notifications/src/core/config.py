@@ -70,8 +70,11 @@ class CronSettings:
         'second': 55,
         'timezone': 'UTC'
     }
-    process_notifications: dict = {
+    process_initiated_notifications: dict = {
         'minute': 10,
+    }
+    process_produced_notifications: dict = {
+        'minute': 5,
     }
 
 

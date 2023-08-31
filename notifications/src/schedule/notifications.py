@@ -1,18 +1,19 @@
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import aiohttp
 from aiohttp.web_exceptions import HTTPException
 from fastapi import status as st
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
 import core.config as conf
 from models.schemas import Notification, NotificationContent
 from services.connections import get_broker, get_db, DbHelpers
 from services.exceptions import db_bad_request
+from services.helpers import process_notifications_helper, \
+    initiate_notification_helper
 
 routing_key = 'user-reporting.v1.likes-for-reviews'
 
@@ -32,38 +33,20 @@ async def likes_for_reviews():
     """
     db = await get_db()
     conn = DbHelpers(db)
+    broker = await get_broker()
     data: dict = await users_daily_likes()
-    correlation_id = round(time.time())
+    correlation_id = str(round(time.time()))
 
     if not data:
         logging.info('If 0 users received 0 likes - don\'t need to send any'
                      ' notifications. Exiting.')
         return
 
-    # Add initial notification to db
-    try:
-        await conn.insert(Notification(str(correlation_id),
-                                       'Initiated'))
-        await conn.insert(NotificationContent(str(correlation_id),
-                                              str(data)))
-    except SQLAlchemyError as err:
-        raise db_bad_request(err)
-
-    # Produce message to the queue
-    broker = await get_broker()
-    await broker.produce(routing_key=routing_key,
-                         data=data,
-                         correlation_id=correlation_id)
-
-    # Update notification status in DB after producing message
-    try:
-        await conn.update(model=Notification,
-                          model_column=Notification.content_id,
-                          column_value=str(correlation_id),
-                          update_values={'status': 'Produced',
-                                         'modified': datetime.utcnow()})
-    except SQLAlchemyError as err:
-        raise db_bad_request(err)
+    await initiate_notification_helper(conn,
+                                       broker,
+                                       correlation_id,
+                                       routing_key,
+                                       data)
 
 
 async def users_daily_likes() -> dict:
@@ -110,19 +93,7 @@ async def process_initiated_notifications():
     """
     db = await get_db()
     conn = DbHelpers(db)
-    utcnow = datetime.utcnow()
-    try:
-        expressions: tuple = \
-            (Notification.status.like('Initiated'),
-             Notification.modified.between(utcnow - timedelta(days=1),
-                                           utcnow - timedelta(minutes=15))
-             )
-        unprocessed = await conn.select(
-            Notification,
-            and_(True, *expressions))
-    except SQLAlchemyError as err:
-        raise db_bad_request(err)
-
+    unprocessed = await process_notifications_helper('Initiated', 15)
     if not unprocessed:
         logging.info('No messages left in `Initiated` state. Everything is '
                      'good.')
@@ -169,3 +140,23 @@ async def process_initiated_notifications():
                                       )
                 except SQLAlchemyError as err:
                     raise db_bad_request(err)
+
+
+async def process_produced_notifications():
+    """
+    Process unfinished notifications in Produced state
+    :return:
+    """
+    unprocessed = await process_notifications_helper('Produced', 10)
+    if not unprocessed:
+        logging.info('No messages left in `Produced` state. Everything is '
+                     'good.')
+    else:
+        for notification in unprocessed:
+            notification_dict = jsonable_encoder(*notification)
+            id_: str = notification_dict['id']
+            content_id: str = notification_dict['content_id']
+            logging.warning(f'Achtung!!1 The message is in Produced state'
+                            f' too long! Take action immediately!\n'
+                            f'id: {id_}\n'
+                            f'content_id {content_id}')
