@@ -1,17 +1,31 @@
 version: "3"
 
 services:
+  postgres:
+    image: postgres:latest
+    privileged: true
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres-db:/data/postgres
+    networks:
+      - backend
+
   rabbitmq:
     image: rabbitmq:latest
     privileged: true
+    container_name: rabbitmq
     env_file:
       - .env
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBIT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBIT_PASS}
     ports:
-      - 5672:5672
-      - 15672:15672
+      - "5672:5672"
+      - "15672:15672"
     healthcheck:
       test: rabbitmq-diagnostics -q ping
       interval: 10s
@@ -19,6 +33,38 @@ services:
     networks:
       - backend
 
+  fastapi-notify-api:
+    build: ./notifications/src/
+    env_file:
+      - .env
+    networks:
+      - backend
+    expose:
+      - "8000"
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  nginx:
+    image: nginx:latest
+    restart: on-failure
+    privileged: true
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/site.conf:/etc/nginx/conf.d/site.conf:ro
+      - static_volume:${APP_HOME}/staticfiles
+    depends_on:
+      - postgres
+      - rabbitmq
+      - fastapi-notify-api
+    ports:
+      - "80:80"
+    networks:
+      - backend
+
+volumes:
+  postgres-db:
+  static_volume:
 
 networks:
   backend:

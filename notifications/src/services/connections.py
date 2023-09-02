@@ -1,13 +1,54 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends
+from sqlalchemy import update, select, Result
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.rabbit import Rabbit, get_rabbit
+from db import AbstractQueueInternal
+from db.postgres import get_session, Base
+from db.rabbit import get_rabbit
+from services.postgres import get_postgres
 from services.rabbit import get_rabbit_service
 
-BrokerDep = Annotated[Rabbit, Depends(get_rabbit_service)]
+BrokerDep = Annotated[AbstractQueueInternal, Depends(get_rabbit_service)]
+DbDep = Annotated[AsyncSession, Depends(get_postgres)]
 
 
-async def get_broker():
+async def get_broker() -> AbstractQueueInternal:
     res = await get_rabbit()
     return res
+
+
+async def get_db():
+    res = await get_session()
+    return res
+
+
+class DbHelpers:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def insert(self, notification: str) -> None:
+        async with self.db:
+            self.db.add(notification)
+            await self.db.commit()
+            await self.db.refresh(notification)
+
+    async def update(self,
+                     model: Base,
+                     model_column,
+                     column_value: str,
+                     update_values: dict) -> None:
+        async with self.db:
+            await self.db.execute(update(model).
+                                  where(model_column == column_value).
+                                  values(**update_values))
+            await self.db.commit()
+
+    async def select(self,
+                     model: Base,
+                     filter_) -> Result[tuple[Any]]:
+        async with self.db:
+            res = await self.db.execute(select(model).
+                                        filter(filter_))
+            return res

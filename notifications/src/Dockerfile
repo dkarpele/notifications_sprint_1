@@ -13,4 +13,6 @@ RUN pip install --upgrade pip \
 
 COPY . ./src
 
-CMD ["/bin/sh", "-c", "gunicorn -k uvicorn.workers.UvicornWorker --chdir src main:app --bind 0.0.0.0:8000"]
+CMD ["/bin/sh", "-c", "pwd; cd src ; alembic upgrade head ; \
+ cd .. ; \
+ gunicorn -k uvicorn.workers.UvicornWorker --chdir src main:app --bind 0.0.0.0:8000"]

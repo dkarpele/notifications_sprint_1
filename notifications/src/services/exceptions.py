@@ -26,6 +26,14 @@ wrong_username_or_password = HTTPException(
 )
 
 
+def db_bad_request(err: Exception):
+    return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(err.__dict__['orig']),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
 def entity_doesnt_exist(err: Exception) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,

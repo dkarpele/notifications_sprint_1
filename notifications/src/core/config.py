@@ -18,8 +18,6 @@ class MainConf(BaseSettings):
 class Settings(MainConf):
     host: str = Field(..., env='HOST_NOTIFICATION_API')
     port: int = Field(..., env='PORT_NOTIFICATION_API')
-    host_auth: str = Field(..., env='HOST_AUTH')
-    port_auth: int = Field(..., env='PORT_AUTH')
     host_ugc: str = Field(..., env='HOST_UGC')
     port_ugc: int = Field(..., env='PORT_UGC')
 
@@ -51,15 +49,35 @@ class RabbitCreds(MainConf):
                 f":{self.rabbit_port}/"
 
 
-rabbit_settings = RabbitCreds()
+amqp_settings = RabbitCreds()
+
+
+class DBCreds(MainConf):
+    dbname: str = Field(..., env="DB_NAME")
+    user: str = Field(..., env="DB_USER")
+    password: str = Field(..., env="DB_PASSWORD")
+    host: str = Field(env="DB_HOST", default='127.0.0.1')
+    port: int = Field(env="DB_PORT", default=5432)
+
+
+db_settings = DBCreds()
 
 
 class CronSettings:
     likes_for_reviews: dict = {
-        'hour': 18,
-        'minute': 45,
-        'second': 00,
+        'hour': 14,
+        'minute': 39,
+        'second': 55,
         'timezone': 'UTC'
+    }
+    process_initiated_notifications: dict = {
+        'minute': 10,
+    }
+    process_produced_notifications: dict = {
+        'minute': 5,
+    }
+    process_consumed_notifications: dict = {
+        'minute': 5,
     }
 
 
