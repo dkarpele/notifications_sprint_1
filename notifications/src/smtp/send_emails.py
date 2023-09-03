@@ -1,3 +1,4 @@
+import logging
 import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -6,11 +7,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+current_path = os.path.dirname(__file__)
+loader = FileSystemLoader(current_path)
+env = Environment(loader=loader)
+
 
 def send_email_registered(data: dict):
-    current_path = os.path.dirname(__file__)
-    loader = FileSystemLoader(current_path)
-    env = Environment(loader=loader)
     template = env.get_template('registered.html')
     template_data = {
         "first_name": data['first_name'],
@@ -26,17 +28,14 @@ def send_email_registered(data: dict):
     try:
         sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
         response = sg.send(message)
-        print(response.status_code)
-        print(response.body)
-        print(response.headers)
+        logging.info(f'Sendgrid status code: {response.status_code}')
+        logging.info(f'Sendgrid message body: {response.body}')
+        logging.info(f'Sendgrid headers:\n {response.headers}')
     except Exception as e:
-        print(e)
+        logging.error(e)
 
 
 def send_email_likes(data: dict):
-    current_path = os.path.dirname(__file__)
-    loader = FileSystemLoader(current_path)
-    env = Environment(loader=loader)
     template = env.get_template('likes_for_review.html')
     for user_id in data:
         to_email = data[user_id][0]
@@ -55,8 +54,8 @@ def send_email_likes(data: dict):
         try:
             sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
             response = sg.send(message)
-            print(response.status_code)
-            print(response.body)
-            print(response.headers)
+            logging.info(f'Sendgrid status code: {response.status_code}')
+            logging.info(f'Sendgrid message body: {response.body}')
+            logging.info(f'Sendgrid headers:\n {response.headers}')
         except Exception as e:
-            print(e)
+            logging.error(e)

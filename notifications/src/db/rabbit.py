@@ -10,7 +10,7 @@ from aio_pika.message import Message
 
 from db import AbstractQueueInternal
 
-from src.smtp.send_emails import send_email_registered, send_email_likes
+from smtp.send_emails import send_email_registered, send_email_likes
 
 
 class Rabbit(AbstractQueueInternal):
@@ -103,18 +103,16 @@ class Rabbit(AbstractQueueInternal):
                 logging.info(f'Listening queue {self.queue_name} ...')
                 async for message in queue_iter:
                     async with message.process():
+                        body = orjson.loads(message.body)
                         logging.info('Message arrived.')
                         if message.routing_key == \
                                 'user-reporting.v1.registered':
-                            send_email_registered(orjson.loads(message.body))
+                            send_email_registered(body)
                         elif message.routing_key == \
                                 'user-reporting.v1.likes-for-reviews':
-                            send_email_likes(orjson.loads(message.body))
-                        logging.info(f'Message from {message.routing_key}'
-                                     f' has been sent.')
-
-                        if self.queue.name in message.body.decode():
-                            break
+                            send_email_likes(body)
+                        logging.info(f'Message with routing-key '
+                                     f'{message.routing_key} has been sent.')
 
     async def close(self):
         logging.info('Closing all connections to rabbit...')

@@ -2,9 +2,6 @@ import logging
 import time
 from datetime import datetime
 
-import aiohttp
-from aiohttp.web_exceptions import HTTPException
-from fastapi import status as st
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -13,7 +10,7 @@ from models.schemas import Notification, NotificationContent
 from services.connections import get_broker, get_db, DbHelpers
 from services.exceptions import db_bad_request
 from services.helpers import process_notifications_helper, \
-    initiate_notification_helper
+    initiate_notification_helper, api_get_helper, api_post_helper
 
 routing_key = 'user-reporting.v1.likes-for-reviews'
 
@@ -29,9 +26,13 @@ async def likes_for_reviews():
     {
     "user_id": [
         [
+            "user_email",
+            "first_name",
+            "last_name",
             "movie_id",
+            "movie_title",
             "review_text shortened to 20 signs",
-            likes amount for the last 24 hours
+            "likes amount for the last 24 hours"
         ]
     ]
     }
@@ -39,24 +40,9 @@ async def likes_for_reviews():
     db = await get_db()
     conn = DbHelpers(db)
     broker = await get_broker()
-    data: dict = await users_daily_likes()
-    correlation_id = str(round(time.time()))
 
-    if not data:
-        logging.info('If 0 users received 0 likes - don\'t need to send any'
-                     ' notifications. Exiting.')
-        return
-
-    await initiate_notification_helper(conn,
-                                       broker,
-                                       correlation_id,
-                                       routing_key,
-                                       data)
-
-
-async def users_daily_likes() -> dict:
     """
-    API returns:
+    API /api/v1/reviews/users-daily-likes returns:
     {
     "user_id": [
         [
@@ -70,25 +56,58 @@ async def users_daily_likes() -> dict:
     url = f'http://{conf.settings.host_ugc}:' \
           f'{conf.settings.port_ugc}' \
           f'/api/v1/reviews/users-daily-likes'
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url=url) as response:
-                body = await response.json()
-                status_code = response.status
-                if status_code != st.HTTP_200_OK:
-                    raise HTTPException(
-                        reason=body['detail'],
-                        headers={"WWW-Authenticate": "Bearer"},
-                    )
-                return body
-    except ConnectionRefusedError as err:
-        raise HTTPException(reason=err.strerror)
-    except aiohttp.ServerTimeoutError as err:
-        raise HTTPException(reason=err.strerror)
-    except aiohttp.TooManyRedirects as err:
-        raise HTTPException(reason=err.strerror)
-    except aiohttp.ClientError as err:
-        raise HTTPException(reason=err.strerror)
+    data_likes: dict = await api_get_helper(url)
+
+    """
+    API /api/v1/films/films-titles returns:
+
+    """
+    url = f'http://{conf.settings.host_content}:' \
+          f'{conf.settings.port_content}' \
+          f'/api/v1/films/films-titles'
+    movies_ids_list = [id_[0] for like in data_likes.values() for id_ in like]
+    data_movies: list = await api_post_helper(url, movies_ids_list)
+
+    """
+    API /api/v1/users_unauth/user_ids returns:
+    [
+    {
+        "first_name": "admin",
+        "last_name": "admin",
+        "email": "admin@example.com",
+        "id": "00791e6e-638e-4dcd-beee-15d6f1bf4571",
+        "disabled": false,
+        "is_admin": true,
+        "roles": []
+    }
+    ]
+    """
+    url = f'http://{conf.settings.host_auth}:' \
+          f'{conf.settings.port_auth}' \
+          f'/api/v1/users_unauth/user_ids'
+    user_ids_list: list = list(data_likes.keys())
+    data_users: list = await api_post_helper(url, user_ids_list)
+
+    # Adding user_data as a last element of dict where key is user_id
+    for user_key in data_likes.keys():
+        for user in data_users:
+            if user_key == user['id']:
+                data_likes[user_key].append([user['email'],
+                                             user['first_name'],
+                                             user['last_name']])
+
+    correlation_id = str(round(time.time()))
+
+    if not data_likes:
+        logging.info('If 0 users received 0 likes - don\'t need to send any'
+                     ' notifications. Exiting.')
+        return
+
+    await initiate_notification_helper(conn,
+                                       broker,
+                                       correlation_id,
+                                       routing_key,
+                                       data_likes)
 
 
 async def process_initiated_notifications():
