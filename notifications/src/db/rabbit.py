@@ -10,7 +10,7 @@ from aio_pika.message import Message
 
 from db import AbstractQueueInternal
 
-from notifications.src.smtp.send_emails import send_email_registered, send_email_likes
+from src.smtp.send_emails import send_email_registered, send_email_likes
 
 
 class Rabbit(AbstractQueueInternal):
@@ -104,11 +104,14 @@ class Rabbit(AbstractQueueInternal):
                 async for message in queue_iter:
                     async with message.process():
                         logging.info('Message arrived.')
-                        if message.routing_key == 'user-reporting.v1.registered':
+                        if message.routing_key == \
+                                'user-reporting.v1.registered':
                             send_email_registered(orjson.loads(message.body))
-                        elif message.routing_key == 'user-reporting.v1.likes-for-reviews':
+                        elif message.routing_key == \
+                                'user-reporting.v1.likes-for-reviews':
                             send_email_likes(orjson.loads(message.body))
-                        logging.info(f'Message from {message.routing_key} has been sent.')
+                        logging.info(f'Message from {message.routing_key}'
+                                     f' has been sent.')
 
                         if self.queue.name in message.body.decode():
                             break

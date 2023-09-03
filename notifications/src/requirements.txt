@@ -15,3 +15,4 @@ alembic==1.11.3
 aio-pika==9.2.2
 sentry-sdk==1.29.2
 python-logstash==0.4.8
+Jinja2==3.1.2
