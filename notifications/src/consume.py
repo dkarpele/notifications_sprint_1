@@ -1,8 +1,19 @@
 import asyncio
 import logging
 
-from core.config import amqp_settings
+from core.config import amqp_settings, db_settings
 from db.rabbit import Rabbit
+from db import postgres as db
+
+
+async def startup_db():
+    logging.info("Connecting to database...")
+    # Connecting to DB
+    db.postgres = db.Postgres(
+        f'postgresql+asyncpg://'
+        f'{db_settings.user}:{db_settings.password}@'
+        f'{db_settings.host}:{db_settings.port}/'
+        f'{db_settings.dbname}')
 
 
 async def startup_consumer():
@@ -18,8 +29,11 @@ async def startup_consumer():
         await rabbit.close()
 
 
+async def main():
+    await asyncio.gather(startup_consumer(), startup_db())
+
 if __name__ == "__main__":
     try:
-        asyncio.run(startup_consumer())
+        asyncio.run(main())
     except KeyboardInterrupt:
         logging.info('Consumer has been closed.')

@@ -1,3 +1,4 @@
+import ast
 import logging
 import time
 from datetime import datetime
@@ -6,13 +7,13 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy.exc import SQLAlchemyError
 
 import core.config as conf
+from db.rabbit import get_broker
 from models.schemas import Notification, NotificationContent
-from services.connections import get_broker, get_db, DbHelpers
+from services.connections import get_db, DbHelpers
 from services.exceptions import db_bad_request
 from services.helpers import process_notifications_helper, \
     initiate_notification_helper, api_get_helper, api_post_helper
-
-routing_key = 'user-reporting.v1.likes-for-reviews'
+from smtp.send_emails import send_email_registered, send_email_likes
 
 
 def success_message(status: str):
@@ -26,20 +27,23 @@ async def likes_for_reviews():
     {
     "user_id": [
         [
-            "user_email",
-            "first_name",
-            "last_name",
             "movie_id",
             "movie_title",
             "review_text shortened to 20 signs",
             "likes amount for the last 24 hours"
-        ]
+        ],
+        [
+            "user_email",
+            "first_name",
+            "last_name",
+        ] - only last element
     ]
     }
     """
     db = await get_db()
     conn = DbHelpers(db)
     broker = await get_broker()
+    routing_key = 'user-reporting.v1.likes-for-reviews'
 
     """
     API /api/v1/reviews/users-daily-likes returns:
@@ -47,8 +51,9 @@ async def likes_for_reviews():
     "user_id": [
         [
             "movie_id",
+            "movie_title"
             "review_text shortened to 20 signs",
-            likes amount for the last 24 hours
+            "likes amount for the last 24 hours"
         ]
     ]
     }
@@ -57,16 +62,6 @@ async def likes_for_reviews():
           f'{conf.settings.port_ugc}' \
           f'/api/v1/reviews/users-daily-likes'
     data_likes: dict = await api_get_helper(url)
-
-    """
-    API /api/v1/films/films-titles returns:
-
-    """
-    url = f'http://{conf.settings.host_content}:' \
-          f'{conf.settings.port_content}' \
-          f'/api/v1/films/films-titles'
-    movies_ids_list = [id_[0] for like in data_likes.values() for id_ in like]
-    data_movies: list = await api_post_helper(url, movies_ids_list)
 
     """
     API /api/v1/users_unauth/user_ids returns:
@@ -117,7 +112,9 @@ async def process_initiated_notifications():
     """
     db = await get_db()
     conn = DbHelpers(db)
+    routing_key = 'user-reporting.v1.likes-for-reviews'
     status = 'Initiated'
+
     unprocessed = await process_notifications_helper(status, 15)
     if not unprocessed:
         success_message(status)
@@ -183,7 +180,7 @@ async def process_produced_notifications():
             logging.warning(f'Achtung!!1 The message stays in {status} state'
                             f' too long! Take action immediately!\n'
                             f'id: {id_}\n'
-                            f'content_id {content_id}')
+                            f'content_id: {content_id}')
 
 
 async def process_consumed_notifications():
@@ -191,12 +188,27 @@ async def process_consumed_notifications():
     Process unfinished notifications in Consumed state
     :return:
     """
+    db = await get_db()
+    conn = DbHelpers(db)
+
     status = 'Consumed'
     unprocessed = await process_notifications_helper(status,
                                                      10)
     if not unprocessed:
         success_message(status)
     else:
-        ...
-        # send message via smtp again
-        # don't forget to check idempotency before sending
+        for notification in unprocessed:
+            notification_dict = jsonable_encoder(*notification)
+            content_id: str = notification_dict['content_id']
+            routing_key: str = notification_dict['routing_key']
+
+            message = await conn.select(
+                model=NotificationContent,
+                filter_=NotificationContent.id.like(content_id))
+            message = message.scalar_one()
+            body = ast.literal_eval(message.content)
+
+            if routing_key == 'user-reporting.v1.registered':
+                await send_email_registered(body, content_id)
+            elif routing_key == 'user-reporting.v1.likes-for-reviews':
+                await send_email_likes(body, content_id)

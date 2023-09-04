@@ -56,6 +56,7 @@ async def initiate_notification_helper(db_conn: DbHelpers,
     # Add initial notification to db
     try:
         await db_conn.insert(Notification(correlation_id,
+                                          routing_key,
                                           'Initiated'))
         await db_conn.insert(NotificationContent(correlation_id,
                                                  str(data)))

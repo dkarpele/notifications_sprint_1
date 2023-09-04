@@ -12,23 +12,22 @@ async def jobs(job: AsyncIOScheduler) -> None:
     :param job: job name as a function
     :return:
     """
-    # await likes_for_reviews()
-    # job.add_job(likes_for_reviews,
-    #             trigger='cron',
-    #             hour=cron_settings.likes_for_reviews['hour'],
-    #             minute=cron_settings.likes_for_reviews['minute'],
-    #             second=cron_settings.likes_for_reviews['second'],
-    #             timezone=cron_settings.likes_for_reviews['timezone'])
-    #
-    # job.add_job(process_initiated_notifications,
-    #             trigger='interval',
-    #             minutes=cron_settings.process_initiated_notifications['minute']
-    #             )
-    #
-    # job.add_job(process_produced_notifications,
-    #             trigger='interval',
-    #             minutes=cron_settings.process_produced_notifications['minute'])
-    #
-    # job.add_job(process_consumed_notifications,
-    #             trigger='interval',
-    #             minutes=cron_settings.process_consumed_notifications['minute'])
+    job.add_job(likes_for_reviews,
+                trigger='cron',
+                hour=cron_settings.likes_for_reviews['hour'],
+                minute=cron_settings.likes_for_reviews['minute'],
+                second=cron_settings.likes_for_reviews['second'],
+                timezone=cron_settings.likes_for_reviews['timezone'])
+
+    job.add_job(process_initiated_notifications,
+                trigger='interval',
+                minutes=cron_settings.process_initiated_notifications['minute']
+                )
+
+    job.add_job(process_produced_notifications,
+                trigger='interval',
+                minutes=cron_settings.process_produced_notifications['minute'])
+
+    job.add_job(process_consumed_notifications,
+                trigger='interval',
+                minutes=cron_settings.process_consumed_notifications['minute'])

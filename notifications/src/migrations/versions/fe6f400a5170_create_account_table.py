@@ -23,6 +23,7 @@ def upgrade() -> None:
         'notifications',
         Notification.id.expression,
         Notification.content_id.expression,
+        Notification.routing_key.expression,
         Notification.status.expression,
         Notification.last_notification_send.expression,
         Notification.failures.expression,

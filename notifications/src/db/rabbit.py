@@ -1,5 +1,9 @@
 import asyncio
 import logging
+from datetime import datetime
+from functools import lru_cache
+from typing import Annotated
+
 import orjson
 
 from aio_pika import DeliveryMode, Exchange, ExchangeType, connect_robust
@@ -7,8 +11,13 @@ from aio_pika.abc import AbstractQueue
 from aio_pika.channel import Channel
 from aio_pika.connection import Connection
 from aio_pika.message import Message
+from fastapi import Depends
+from sqlalchemy.exc import SQLAlchemyError
 
 from db import AbstractQueueInternal
+from models.schemas import Notification
+from services.connections import get_db, DbHelpers
+from services.exceptions import db_bad_request
 
 from smtp.send_emails import send_email_registered, send_email_likes
 
@@ -97,22 +106,42 @@ class Rabbit(AbstractQueueInternal):
         await self.queue.bind(self.exchange, routing_key=routing_key)
 
     async def iterate(self):
+        db = await get_db()
+        conn = DbHelpers(db)
         async with self.connection:
             async with self.queue.iterator() as queue_iter:
-                # Cancel consuming after __aexit__
                 logging.info(f'Listening queue {self.queue_name} ...')
                 async for message in queue_iter:
                     async with message.process():
                         body = orjson.loads(message.body)
-                        logging.info('Message arrived.')
+                        correlation_id = str(message.correlation_id)
+                        # Update notification status in DB after consuming
+                        # message
+                        try:
+                            await conn.update(
+                                model=Notification,
+                                model_column=Notification.content_id,
+                                column_value=correlation_id,
+                                update_values={
+                                    'status': 'Consumed',
+                                    'failures': 0,
+                                    'modified': datetime.utcnow()})
+                        except SQLAlchemyError as err:
+                            raise db_bad_request(err)
+
+                        logging.info(f'Message arrived to queue:\n{body}\n'
+                                     f'Trying to send an email.')
                         if message.routing_key == \
                                 'user-reporting.v1.registered':
-                            send_email_registered(body)
+                            await send_email_registered(body,
+                                                        correlation_id)
                         elif message.routing_key == \
                                 'user-reporting.v1.likes-for-reviews':
-                            send_email_likes(body)
+                            await send_email_likes(body,
+                                                   correlation_id)
                         logging.info(f'Message with routing-key '
-                                     f'{message.routing_key} has been sent.')
+                                     f'{message.routing_key} has been '
+                                     f'processed.')
 
     async def close(self):
         logging.info('Closing all connections to rabbit...')
@@ -127,3 +156,17 @@ rabbit: Rabbit | None = None
 
 async def get_rabbit() -> AbstractQueueInternal | None:
     return rabbit
+
+
+async def get_broker() -> AbstractQueueInternal:
+    res = await get_rabbit()
+    return res
+
+
+@lru_cache()
+def get_rabbit_service(
+        rabbit_: Rabbit = Depends(get_rabbit)) -> Rabbit:
+    return rabbit_
+
+
+BrokerDep = Annotated[AbstractQueueInternal, Depends(get_rabbit_service)]
