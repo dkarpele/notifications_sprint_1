@@ -40,6 +40,8 @@ async def message_already_sent(correlation_id: str) -> bool | None:
         message = message.scalar_one()
         if message.status == 'Sent':
             return True
+        else:
+            return None
     except SQLAlchemyError as err:
         raise db_bad_request(err)
 
