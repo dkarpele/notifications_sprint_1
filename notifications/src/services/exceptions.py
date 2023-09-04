@@ -34,6 +34,15 @@ def db_bad_request(err: Exception):
         )
 
 
+def message_already_sent(correlation_id: str):
+    return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Message with correlation_id {correlation_id} has already'
+                   f'been sent. Skipping sending.',
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
 def entity_doesnt_exist(err: Exception) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,

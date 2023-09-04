@@ -1,0 +1,5 @@
+<h2>Hello {{first_name}} {{last_name}}!</h2>
+<h4>These are your best reviews for today:</h4>
+{% for item in reviews %}
+<p>Review "{{item[2]}}..." to the film "{{item[1]}}" received {{item[3]}} likes</p>
+{%endfor%}

@@ -1,8 +1,12 @@
 from datetime import datetime, timedelta
 from typing import Any
 
+import aiohttp
+from aiohttp.web_exceptions import HTTPException
+
 from sqlalchemy import Result, and_
 from sqlalchemy.exc import SQLAlchemyError
+from starlette import status as st
 
 from db import AbstractQueueInternal
 from models.schemas import Notification, NotificationContent
@@ -52,6 +56,7 @@ async def initiate_notification_helper(db_conn: DbHelpers,
     # Add initial notification to db
     try:
         await db_conn.insert(Notification(correlation_id,
+                                          routing_key,
                                           'Initiated'))
         await db_conn.insert(NotificationContent(correlation_id,
                                                  str(data)))
@@ -73,3 +78,53 @@ async def initiate_notification_helper(db_conn: DbHelpers,
                                             'modified': datetime.utcnow()})
     except SQLAlchemyError as err:
         raise db_bad_request(err)
+
+
+async def api_get_helper(url) -> dict | list:
+    """
+    API GET helper:
+    """
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url=url) as response:
+                body = await response.json()
+                status_code = response.status
+                if status_code != st.HTTP_200_OK:
+                    raise HTTPException(
+                        reason=body['detail'],
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+                return body
+    except ConnectionRefusedError as err:
+        raise HTTPException(reason=err.strerror)
+    except aiohttp.ServerTimeoutError as err:
+        raise HTTPException(reason=err.strerror)
+    except aiohttp.TooManyRedirects as err:
+        raise HTTPException(reason=err.strerror)
+    except aiohttp.ClientError as err:
+        raise HTTPException(reason=err.strerror)
+
+
+async def api_post_helper(url, user_ids_list):
+    """
+    API POST helper:
+    """
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url=url, json=user_ids_list) as response:
+                body = await response.json()
+                status_code = response.status
+                if status_code != st.HTTP_200_OK:
+                    raise HTTPException(
+                        reason=body['detail'],
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+                return body
+    except ConnectionRefusedError as err:
+        raise HTTPException(reason=err.strerror)
+    except aiohttp.ServerTimeoutError as err:
+        raise HTTPException(reason=err.strerror)
+    except aiohttp.TooManyRedirects as err:
+        raise HTTPException(reason=err.strerror)
+    except aiohttp.ClientError as err:
+        raise HTTPException(reason=err.strerror)

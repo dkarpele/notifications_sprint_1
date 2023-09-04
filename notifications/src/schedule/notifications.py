@@ -1,21 +1,19 @@
+import ast
 import logging
 import time
 from datetime import datetime
 
-import aiohttp
-from aiohttp.web_exceptions import HTTPException
-from fastapi import status as st
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.exc import SQLAlchemyError
 
 import core.config as conf
+from db.rabbit import get_broker
 from models.schemas import Notification, NotificationContent
-from services.connections import get_broker, get_db, DbHelpers
+from services.connections import get_db, DbHelpers
 from services.exceptions import db_bad_request
 from services.helpers import process_notifications_helper, \
-    initiate_notification_helper
-
-routing_key = 'user-reporting.v1.likes-for-reviews'
+    initiate_notification_helper, api_get_helper, api_post_helper
+from smtp.send_emails import send_email_registered, send_email_likes
 
 
 def success_message(status: str):
@@ -30,19 +28,72 @@ async def likes_for_reviews():
     "user_id": [
         [
             "movie_id",
+            "movie_title",
             "review_text shortened to 20 signs",
-            likes amount for the last 24 hours
-        ]
+            "likes amount for the last 24 hours"
+        ],
+        [
+            "user_email",
+            "first_name",
+            "last_name",
+        ] - only last element
     ]
     }
     """
     db = await get_db()
     conn = DbHelpers(db)
     broker = await get_broker()
-    data: dict = await users_daily_likes()
+    routing_key = 'user-reporting.v1.likes-for-reviews'
+
+    """
+    API /api/v1/reviews/users-daily-likes returns:
+    {
+    "user_id": [
+        [
+            "movie_id",
+            "movie_title"
+            "review_text shortened to 20 signs",
+            "likes amount for the last 24 hours"
+        ]
+    ]
+    }
+    """
+    url = f'http://{conf.settings.host_ugc}:' \
+          f'{conf.settings.port_ugc}' \
+          f'/api/v1/reviews/users-daily-likes'
+    data_likes: dict = await api_get_helper(url)
+
+    """
+    API /api/v1/users_unauth/user_ids returns:
+    [
+    {
+        "first_name": "admin",
+        "last_name": "admin",
+        "email": "admin@example.com",
+        "id": "00791e6e-638e-4dcd-beee-15d6f1bf4571",
+        "disabled": false,
+        "is_admin": true,
+        "roles": []
+    }
+    ]
+    """
+    url = f'http://{conf.settings.host_auth}:' \
+          f'{conf.settings.port_auth}' \
+          f'/api/v1/users_unauth/user_ids'
+    user_ids_list: list = list(data_likes.keys())
+    data_users: list = await api_post_helper(url, user_ids_list)
+
+    # Adding user_data as a last element of dict where key is user_id
+    for user_key in data_likes.keys():
+        for user in data_users:
+            if user_key == user['id']:
+                data_likes[user_key].append([user['email'],
+                                             user['first_name'],
+                                             user['last_name']])
+
     correlation_id = str(round(time.time()))
 
-    if not data:
+    if not data_likes:
         logging.info('If 0 users received 0 likes - don\'t need to send any'
                      ' notifications. Exiting.')
         return
@@ -51,44 +102,7 @@ async def likes_for_reviews():
                                        broker,
                                        correlation_id,
                                        routing_key,
-                                       data)
-
-
-async def users_daily_likes() -> dict:
-    """
-    API returns:
-    {
-    "user_id": [
-        [
-            "movie_id",
-            "review_text shortened to 20 signs",
-            likes amount for the last 24 hours
-        ]
-    ]
-    }
-    """
-    url = f'http://{conf.settings.host_ugc}:' \
-          f'{conf.settings.port_ugc}' \
-          f'/api/v1/reviews/users-daily-likes'
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url=url) as response:
-                body = await response.json()
-                status_code = response.status
-                if status_code != st.HTTP_200_OK:
-                    raise HTTPException(
-                        reason=body['detail'],
-                        headers={"WWW-Authenticate": "Bearer"},
-                    )
-                return body
-    except ConnectionRefusedError as err:
-        raise HTTPException(reason=err.strerror)
-    except aiohttp.ServerTimeoutError as err:
-        raise HTTPException(reason=err.strerror)
-    except aiohttp.TooManyRedirects as err:
-        raise HTTPException(reason=err.strerror)
-    except aiohttp.ClientError as err:
-        raise HTTPException(reason=err.strerror)
+                                       data_likes)
 
 
 async def process_initiated_notifications():
@@ -98,7 +112,9 @@ async def process_initiated_notifications():
     """
     db = await get_db()
     conn = DbHelpers(db)
+    routing_key = 'user-reporting.v1.likes-for-reviews'
     status = 'Initiated'
+
     unprocessed = await process_notifications_helper(status, 15)
     if not unprocessed:
         success_message(status)
@@ -164,7 +180,7 @@ async def process_produced_notifications():
             logging.warning(f'Achtung!!1 The message stays in {status} state'
                             f' too long! Take action immediately!\n'
                             f'id: {id_}\n'
-                            f'content_id {content_id}')
+                            f'content_id: {content_id}')
 
 
 async def process_consumed_notifications():
@@ -172,12 +188,27 @@ async def process_consumed_notifications():
     Process unfinished notifications in Consumed state
     :return:
     """
+    db = await get_db()
+    conn = DbHelpers(db)
+
     status = 'Consumed'
     unprocessed = await process_notifications_helper(status,
                                                      10)
     if not unprocessed:
         success_message(status)
     else:
-        ...
-        # send message via smtp again
-        # don't forget to check idempotency before sending
+        for notification in unprocessed:
+            notification_dict = jsonable_encoder(*notification)
+            content_id: str = notification_dict['content_id']
+            routing_key: str = notification_dict['routing_key']
+
+            message = await conn.select(
+                model=NotificationContent,
+                filter_=NotificationContent.id.like(content_id))
+            message = message.scalar_one()
+            body = ast.literal_eval(message.content)
+
+            if routing_key == 'user-reporting.v1.registered':
+                await send_email_registered(body, content_id)
+            elif routing_key == 'user-reporting.v1.likes-for-reviews':
+                await send_email_likes(body, content_id)

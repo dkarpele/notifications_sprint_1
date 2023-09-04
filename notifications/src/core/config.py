@@ -20,6 +20,10 @@ class Settings(MainConf):
     port: int = Field(..., env='PORT_NOTIFICATION_API')
     host_ugc: str = Field(..., env='HOST_UGC')
     port_ugc: int = Field(..., env='PORT_UGC')
+    host_auth: str = Field(..., env='HOST_AUTH')
+    port_auth: int = Field(..., env='PORT_AUTH')
+    host_content: str = Field(..., env='HOST_CONTENT')
+    port_content: int = Field(..., env='PORT_CONTENT')
 
 
 settings = Settings()

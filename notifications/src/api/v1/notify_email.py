@@ -2,7 +2,8 @@ from fastapi import APIRouter, status
 from fastapi.encoders import jsonable_encoder
 
 from models.email import RequestUserModel
-from services.connections import BrokerDep, DbDep, DbHelpers
+from services.connections import DbDep, DbHelpers
+from db.rabbit import BrokerDep
 from services.helpers import initiate_notification_helper
 
 # Объект router, в котором регистрируем обработчики
