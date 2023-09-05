@@ -25,6 +25,12 @@ wrong_username_or_password = HTTPException(
             headers={"WWW-Authenticate": "Bearer"},
 )
 
+user_doesnt_exist = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User doesn't exist",
+            headers={"WWW-Authenticate": "Bearer"},
+)
+
 
 def db_bad_request(err: Exception):
     return HTTPException(

@@ -23,9 +23,6 @@ class TestNotifications:
             (
                     {
                         "user_id": user_id,
-                        "user_email": "user@example.com",
-                        "first_name": "string",
-                        "last_name": "string"
                     },
                     {'status': HTTPStatus.CREATED},
             ),
@@ -45,9 +42,6 @@ class TestNotifications:
             (
                     {
                         "user_id": user_id,
-                        "user_email": "user@example.com",
-                        "first_name": "string",
-                        "last_name": "string"
                     },
                     {'status': HTTPStatus.BAD_REQUEST},
             ),
