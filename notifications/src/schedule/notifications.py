@@ -13,7 +13,7 @@ from services.connections import get_db, DbHelpers
 from services.exceptions import db_bad_request
 from services.helpers import process_notifications_helper, \
     initiate_notification_helper, api_get_helper, api_post_helper
-from smtp.send_emails import send_email_registered, send_email_likes
+from message_worker.send_emails import Email
 
 
 def success_message(status: str):
@@ -209,6 +209,6 @@ async def process_consumed_notifications():
             body = ast.literal_eval(message.content)
 
             if routing_key == 'user-reporting.v1.registered':
-                await send_email_registered(body, content_id)
+                await Email().send_registered(body, content_id)
             elif routing_key == 'user-reporting.v1.likes-for-reviews':
-                await send_email_likes(body, content_id)
+                await Email().send_likes(body, content_id)
