@@ -8,6 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 from sqlalchemy.exc import SQLAlchemyError
 
+from core.config import email_settings
 from models.schemas import Notification
 from services.connections import get_db, DbHelpers
 from services.exceptions import db_bad_request
@@ -40,8 +41,7 @@ async def message_already_sent(correlation_id: str) -> bool | None:
         message = message.scalar_one()
         if message.status == 'Sent':
             return True
-        else:
-            return None
+        return None
     except SQLAlchemyError as err:
         raise db_bad_request(err)
 
@@ -76,12 +76,12 @@ async def send_email_registered(data: dict, correlation_id: str):
     output = template.render(**template_data)
 
     message = Mail(
-        from_email=f'{os.environ.get("FROM_EMAIL")}',
+        from_email=email_settings.from_email,
         to_emails=data['user_email'],
         subject='User registration confirmation',
         html_content=output)
     try:
-        sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+        sg = SendGridAPIClient(email_settings.sg_api_key)
         response = sg.send(message)
         logging.info(f'Sendgrid status code: {response.status_code}')
         logging.info(f'Sendgrid message body: {response.body}')
@@ -107,12 +107,12 @@ async def send_email_likes(data: dict, correlation_id: str):
         output = template.render(**template_data)
 
         message = Mail(
-            from_email=f'{os.environ.get("FROM_EMAIL")}',
+            from_email=email_settings.from_email,
             to_emails=to_email,
             subject='Your best comments today! ',
             html_content=output)
         try:
-            sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+            sg = SendGridAPIClient(email_settings.sg_api_key)
             response = sg.send(message)
             logging.info(f'Sendgrid status code: {response.status_code}')
             logging.info(f'Sendgrid message body: {response.body}')

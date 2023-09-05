@@ -1,3 +1,4 @@
+import os
 from logging import config as logging_config
 
 from core.logger import LOGGING
@@ -62,6 +63,7 @@ class DBCreds(MainConf):
     password: str = Field(..., env="DB_PASSWORD")
     host: str = Field(env="DB_HOST", default='127.0.0.1')
     port: int = Field(env="DB_PORT", default=5432)
+    echo: bool = os.getenv('ENGINE_ECHO', 'False') == 'True'
 
 
 db_settings = DBCreds()
@@ -86,3 +88,11 @@ class CronSettings:
 
 
 cron_settings = CronSettings()
+
+
+class EmailSettings(MainConf):
+    sg_api_key: str = Field(..., env="SENDGRID_API_KEY")
+    from_email: str = Field(..., env="FROM_EMAIL")
+
+
+email_settings = EmailSettings()
