@@ -19,7 +19,7 @@ from models.schemas import Notification
 from services.connections import get_db, DbHelpers
 from services.exceptions import db_bad_request
 
-from smtp.send_emails import send_email_registered, send_email_likes
+from message_worker.send_emails import Email
 
 
 class Rabbit(AbstractQueueInternal):
@@ -133,12 +133,12 @@ class Rabbit(AbstractQueueInternal):
                                      f'Trying to send an email.')
                         if message.routing_key == \
                                 'user-reporting.v1.registered':
-                            await send_email_registered(body,
-                                                        correlation_id)
+                            await Email().send_registered(body,
+                                                          correlation_id)
                         elif message.routing_key == \
                                 'user-reporting.v1.likes-for-reviews':
-                            await send_email_likes(body,
-                                                   correlation_id)
+                            await Email().send_likes(body,
+                                                     correlation_id)
                         logging.info(f'Message with routing-key '
                                      f'{message.routing_key} has been '
                                      f'processed.')
