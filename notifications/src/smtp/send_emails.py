@@ -77,7 +77,7 @@ async def send_email_registered(data: dict, correlation_id: str):
 
     message = Mail(
         from_email=email_settings.from_email,
-        to_emails=data['user_email'],
+        to_emails=data['email'],
         subject='User registration confirmation',
         html_content=output)
     try:
