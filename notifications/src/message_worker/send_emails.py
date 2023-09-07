@@ -41,7 +41,8 @@ class Email(AbstractMessage):
             await self.change_db_status(correlation_id)
             await self.add_notifications_history(data['id'],
                                                  data['email'],
-                                                 template_data)
+                                                 template_data,
+                                                 output)
         except Exception as e:
             logging.error(e)
 
@@ -75,6 +76,7 @@ class Email(AbstractMessage):
                 await self.change_db_status(correlation_id)
                 await self.add_notifications_history(user_id,
                                                      to_email,
-                                                     template_data)
+                                                     template_data,
+                                                     output)
             except Exception as e:
                 logging.error(e)

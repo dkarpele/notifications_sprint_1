@@ -1,21 +1,20 @@
+import ast
 import logging
-
 from typing import Annotated
 
 from fastapi import APIRouter, status, Depends
 from fastapi.encoders import jsonable_encoder
 
 import core.config as conf
+from db.rabbit import BrokerDep
 from models.email import RequestUserModel
 from models.model import PaginateModel
 from models.notifications import NotificationsHistoryModel
 from services.connections import DbDep, DbHelpers
-from db.rabbit import BrokerDep
 from services.exceptions import user_doesnt_exist
 from services.helpers import initiate_notification_helper, api_post_helper, \
-    get_notification_history_helper
-
-from services.token import security_jwt, get_user_id
+    get_notification_history_helper, api_get_helper
+from services.token import security_jwt
 
 # Объект router, в котором регистрируем обработчики
 router = APIRouter()
@@ -54,17 +53,36 @@ async def user_welcome(user: RequestUserModel,
             status_code=status.HTTP_200_OK,
             description="получение истории уведомлений",
             response_description="user_email, message")
-async def add_review(pagination: Paginate,
-                     token: Annotated[str, Depends(security_jwt)],
-                     db: DbDep) -> list[NotificationsHistoryModel]:
+async def get_history(pagination: Paginate,
+                      token: Annotated[str, Depends(security_jwt)],
+                      db: DbDep) -> list[NotificationsHistoryModel]:
     page = pagination.page_number
     size = pagination.page_size
-    user_id = await get_user_id(token)
+
     conn = DbHelpers(db)
-    data = await get_notification_history_helper(conn, user_id, page, size)
+
+    # Getting user id from token
+    url = f'http://{conf.settings.host_auth}:'\
+          f'{conf.settings.port_auth}'\
+          f'/api/v1/users/me'
+    headers = {'Authorization': f'Bearer {token}'}
+    user_data = await api_get_helper(url, headers)
+
+    data = await get_notification_history_helper(conn,
+                                                 user_data['id'],
+                                                 page,
+                                                 size)
+
     res = []
-    for notification in data.first():
-        res.append(NotificationsHistoryModel(
-            user_email=notification.user_email,
-            message=eval(notification.message)))
+    for notification in data:
+        notification = jsonable_encoder(*notification)
+        res.append(
+            NotificationsHistoryModel(
+                user_email=notification['user_email'],
+                message_content=ast.literal_eval(
+                    notification['message_content']),
+                html_content=notification['html_content'],
+                last_notification_send=notification['last_notification_send']
+            )
+        )
     return res

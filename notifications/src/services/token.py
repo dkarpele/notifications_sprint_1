@@ -1,10 +1,7 @@
 import http
 
-import aiohttp
-from fastapi import HTTPException, Request, status as st
+from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
-import core.config as conf
 
 
 class JWTBearer(HTTPBearer):
@@ -28,30 +25,3 @@ class JWTBearer(HTTPBearer):
 
 
 security_jwt = JWTBearer()
-
-
-async def get_user_id(token: str) -> str:
-    try:
-        headers = {'Authorization': f'Bearer {token}'}
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url=f'http://{conf.settings.host_auth}:'
-                                       f'{conf.settings.port_auth}'
-                                       f'/api/v1/users/me') as response:
-                detail = await response.json()
-                status_code = response.status
-                if status_code != st.HTTP_200_OK:
-                    raise HTTPException(
-                        status_code=status_code,
-                        detail=detail['detail'],
-                        headers={"WWW-Authenticate": "Bearer"},
-                    )
-                return detail['id']
-    except aiohttp.ServerTimeoutError as err:
-        raise HTTPException(status_code=st.HTTP_504_GATEWAY_TIMEOUT,
-                            detail=err.strerror)
-    except aiohttp.TooManyRedirects as err:
-        raise HTTPException(status_code=st.HTTP_502_BAD_GATEWAY,
-                            detail=err.strerror)
-    except aiohttp.ClientError as err:
-        raise HTTPException(status_code=st.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail=err.strerror)

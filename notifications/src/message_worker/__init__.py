@@ -40,7 +40,7 @@ class AbstractMessage(ABC):
         try:
             message = await conn.select(
                 model=Notification,
-                filter_=Notification.content_id.like(correlation_id))
+                filter_=Notification.content_id == correlation_id)
             message = message.scalar_one()
             if message.status == 'Sent':
                 return True
@@ -68,13 +68,19 @@ class AbstractMessage(ABC):
     @staticmethod
     async def add_notifications_history(user_id: str,
                                         user_email: str,
-                                        data: dict) -> None:
+                                        message_content: dict,
+                                        html_content: str = '') -> None:
         db = await get_db()
         conn = DbHelpers(db)
         try:
-            await conn.insert(NotificationsHistory(user_id,
-                                                   user_email,
-                                                   str(data)))
+            await conn.insert(
+                NotificationsHistory(user_id,
+                                     user_email,
+                                     str(message_content),
+                                     html_content,
+                                     datetime.utcnow()
+                                     )
+            )
 
         except SQLAlchemyError as err:
             raise db_bad_request(err)

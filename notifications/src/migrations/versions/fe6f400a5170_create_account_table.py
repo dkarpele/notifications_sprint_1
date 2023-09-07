@@ -39,15 +39,17 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        'notifications-history',
+        'notifications_history',
         NotificationsHistory.id.expression,
         NotificationsHistory.user_id.expression,
         NotificationsHistory.user_email.expression,
-        NotificationsHistory.message.expression
+        NotificationsHistory.message_content.expression,
+        NotificationsHistory.html_content.expression,
+        NotificationsHistory.last_notification_send.expression
     )
 
 
 def downgrade() -> None:
     op.drop_table('notifications')
     op.drop_table('content')
-    op.drop_table('notifications-history')
+    op.drop_table('notifications_history')
