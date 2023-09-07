@@ -9,7 +9,8 @@ from typing import Sequence, Union
 
 from alembic import op
 
-from models.schemas import Notification, NotificationContent, NotificationsHistory
+from models.schemas import Notification, NotificationContent, \
+    NotificationsHistory
 
 # revision identifiers, used by Alembic.
 revision: str = 'fe6f400a5170'

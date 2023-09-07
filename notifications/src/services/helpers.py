@@ -9,7 +9,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette import status as st
 
 from db import AbstractQueueInternal
-from models.schemas import Notification, NotificationContent, NotificationsHistory
+from models.schemas import Notification, NotificationContent, \
+    NotificationsHistory
 from services.connections import get_db, DbHelpers
 from services.exceptions import db_bad_request
 
@@ -138,12 +139,15 @@ async def get_notification_history_helper(db_conn: DbHelpers,
     Helper to initiate notification
     :param db_conn: Relation DB
     :param user_id:
+    :param page:
+    :param size:
     :return:
     """
     # Add initial notification to db
     try:
         data = await db_conn.select(NotificationsHistory,
-                                    NotificationsHistory.user_id == user_id)
+                                    NotificationsHistory.user_id == user_id,
+                                    page, size)
         return data
     except SQLAlchemyError as err:
         raise db_bad_request(err)

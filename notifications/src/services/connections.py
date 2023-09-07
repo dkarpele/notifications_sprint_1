@@ -45,10 +45,10 @@ class DbHelpers:
             if page and size:
                 offset = (page * size) - size
                 res = await self.db.execute(select(model).
-                                             filter(filter_).
-                                             offset(offset).
-                                             limit(size))
+                                            filter(filter_).
+                                            offset(offset).
+                                            limit(size))
             else:
                 res = await self.db.execute(select(model).
-                                        filter(filter_))
+                                            filter(filter_))
             return res

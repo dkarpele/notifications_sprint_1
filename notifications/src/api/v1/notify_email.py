@@ -12,7 +12,9 @@ from models.notifications import NotificationsHistoryModel
 from services.connections import DbDep, DbHelpers
 from db.rabbit import BrokerDep
 from services.exceptions import user_doesnt_exist
-from services.helpers import initiate_notification_helper, api_post_helper, get_notification_history_helper
+from services.helpers import initiate_notification_helper, api_post_helper, \
+    get_notification_history_helper
+
 from services.token import security_jwt, get_user_id
 
 # Объект router, в котором регистрируем обработчики
@@ -48,10 +50,10 @@ async def user_welcome(user: RequestUserModel,
 
 
 @router.get('/get-notifications-history',
-             response_model=list[NotificationsHistoryModel],
-             status_code=status.HTTP_200_OK,
-             description="получение истории уведомлений, отправленных на почту",
-             response_description="user_email, message")
+            response_model=list[NotificationsHistoryModel],
+            status_code=status.HTTP_200_OK,
+            description="получение истории уведомлений",
+            response_description="user_email, message")
 async def add_review(pagination: Paginate,
                      token: Annotated[str, Depends(security_jwt)],
                      db: DbDep) -> list[NotificationsHistoryModel]:
@@ -62,5 +64,7 @@ async def add_review(pagination: Paginate,
     data = await get_notification_history_helper(conn, user_id, page, size)
     res = []
     for notification in data.first():
-        res.append(NotificationsHistoryModel(user_email=notification.user_email, message=eval(notification.message)))
+        res.append(NotificationsHistoryModel(
+            user_email=notification.user_email,
+            message=eval(notification.message)))
     return res
