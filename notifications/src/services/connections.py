@@ -39,8 +39,8 @@ class DbHelpers:
     async def select(self,
                      model: Base,
                      filter_,
-                     page: int = None,
-                     size: int = None) -> Result[tuple[Any]]:
+                     page: int = 0,
+                     size: int = 0) -> Result[tuple[Any]]:
         async with self.db:
             if page and size:
                 offset = (page * size) - size
