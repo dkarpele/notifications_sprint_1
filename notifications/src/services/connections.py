@@ -38,8 +38,17 @@ class DbHelpers:
 
     async def select(self,
                      model: Base,
-                     filter_) -> Result[tuple[Any]]:
+                     filter_,
+                     page: int = None,
+                     size: int = None) -> Result[tuple[Any]]:
         async with self.db:
-            res = await self.db.execute(select(model).
+            if page and size:
+                offset = (page * size) - size
+                res = await self.db.execute(select(model).
+                                             filter(filter_).
+                                             offset(offset).
+                                             limit(size))
+            else:
+                res = await self.db.execute(select(model).
                                         filter(filter_))
             return res
