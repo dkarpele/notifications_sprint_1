@@ -4,7 +4,7 @@ from datetime import datetime
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from models.schemas import Notification
+from models.schemas import Notification, NotificationsHistory
 from services.connections import get_db, DbHelpers
 from services.exceptions import db_bad_request
 
@@ -62,6 +62,20 @@ class AbstractMessage(ABC):
                     'failures': 0,
                     'modified': datetime.utcnow(),
                     'last_notification_send': datetime.utcnow()})
+        except SQLAlchemyError as err:
+            raise db_bad_request(err)
+
+    @staticmethod
+    async def add_notifications_history(user_id: str,
+                                        user_email: str,
+                                        data: dict) -> None:
+        db = await get_db()
+        conn = DbHelpers(db)
+        try:
+            await conn.insert(NotificationsHistory(user_id,
+                                                   user_email,
+                                                   str(data)))
+
         except SQLAlchemyError as err:
             raise db_bad_request(err)
 
