@@ -65,3 +65,25 @@ class NotificationContent(Base):
 
     def __repr__(self):
         return f'<Content {self.content}>'
+
+
+class NotificationsHistory(Base):
+    __tablename__ = 'notifications-history'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
+                unique=True, nullable=False)
+    user_id = Column(String, nullable=True)
+    user_email = Column(String, nullable=True)
+
+    message = Column(String, nullable=True)
+
+    def __init__(self,
+                 user_id: str,
+                 user_email: str,
+                 message: str):
+        self.user_id = user_id
+        self.user_email = user_email
+        self.message = message
+
+    def __repr__(self):
+        return f'<History {self.user_id}>'

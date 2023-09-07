@@ -9,7 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 
-from models.schemas import Notification, NotificationContent
+from models.schemas import Notification, NotificationContent, NotificationsHistory
 
 # revision identifiers, used by Alembic.
 revision: str = 'fe6f400a5170'
@@ -37,7 +37,16 @@ def upgrade() -> None:
         NotificationContent.content.expression
     )
 
+    op.create_table(
+        'notifications-history',
+        NotificationsHistory.id.expression,
+        NotificationsHistory.user_id.expression,
+        NotificationsHistory.user_email.expression,
+        NotificationsHistory.message.expression
+    )
+
 
 def downgrade() -> None:
     op.drop_table('notifications')
     op.drop_table('content')
+    op.drop_table('notifications-history')
