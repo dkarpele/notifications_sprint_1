@@ -9,6 +9,8 @@ from services.postgres import get_postgres
 
 DbDep = Annotated[AsyncSession, Depends(get_postgres)]
 
+MAX_PAGE_SIZE = 10
+
 
 async def get_db():
     res = await get_session()
@@ -38,8 +40,24 @@ class DbHelpers:
 
     async def select(self,
                      model: Base,
-                     filter_) -> Result[tuple[Any]]:
+                     filter_,
+                     page: int | None = None,
+                     size: int | None = None) -> Result[tuple[Any]]:
         async with self.db:
+            if page and size:
+                offset = (page * size) - size
+            elif page and not size:
+                size = MAX_PAGE_SIZE
+                offset = (page * size) - size
+            elif not page and size:
+                offset = 0
+            else:
+                offset = 0
+                size = MAX_PAGE_SIZE
+
             res = await self.db.execute(select(model).
-                                        filter(filter_))
+                                        filter(filter_).
+                                        offset(offset).
+                                        limit(size))
+
             return res

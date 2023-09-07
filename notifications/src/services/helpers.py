@@ -2,14 +2,15 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import aiohttp
-from aiohttp.web_exceptions import HTTPException
+from fastapi import HTTPException
 
 from sqlalchemy import Result, and_
 from sqlalchemy.exc import SQLAlchemyError
 from starlette import status as st
 
 from db import AbstractQueueInternal
-from models.schemas import Notification, NotificationContent
+from models.schemas import Notification, NotificationContent, \
+    NotificationsHistory
 from services.connections import get_db, DbHelpers
 from services.exceptions import db_bad_request
 
@@ -26,7 +27,7 @@ async def process_notifications_helper(status: str,
     utcnow = datetime.utcnow()
     try:
         expressions: tuple = \
-            (Notification.status.like(status),
+            (Notification.status == status,
              Notification.modified.between(
                  utcnow - timedelta(days=1),
                  utcnow - timedelta(minutes=wait_minutes))
@@ -55,12 +56,11 @@ async def initiate_notification_helper(db_conn: DbHelpers,
     """
     # Add initial notification to db
     try:
+        await db_conn.insert(NotificationContent(correlation_id,
+                                                 str(data)))
         await db_conn.insert(Notification(correlation_id,
                                           routing_key,
                                           'Initiated'))
-        await db_conn.insert(NotificationContent(correlation_id,
-                                                 str(data)))
-
     except SQLAlchemyError as err:
         raise db_bad_request(err)
 
@@ -80,29 +80,35 @@ async def initiate_notification_helper(db_conn: DbHelpers,
         raise db_bad_request(err)
 
 
-async def api_get_helper(url) -> dict | list:
+async def api_get_helper(url: str,
+                         header: dict | None = None) -> dict | list:
     """
     API GET helper:
     """
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(headers=header) as session:
             async with session.get(url=url) as response:
                 body = await response.json()
                 status_code = response.status
                 if status_code != st.HTTP_200_OK:
                     raise HTTPException(
-                        reason=body['detail'],
+                        status_code=status_code,
+                        detail=body['detail'],
                         headers={"WWW-Authenticate": "Bearer"},
                     )
                 return body
     except ConnectionRefusedError as err:
-        raise HTTPException(reason=err.strerror)
+        raise HTTPException(status_code=status_code,
+                            detail=err.strerror)
     except aiohttp.ServerTimeoutError as err:
-        raise HTTPException(reason=err.strerror)
+        raise HTTPException(status_code=status_code,
+                            detail=err.strerror)
     except aiohttp.TooManyRedirects as err:
-        raise HTTPException(reason=err.strerror)
+        raise HTTPException(status_code=status_code,
+                            detail=err.strerror)
     except aiohttp.ClientError as err:
-        raise HTTPException(reason=err.strerror)
+        raise HTTPException(status_code=status_code,
+                            detail=err.strerror)
 
 
 async def api_post_helper(url, user_ids_list):
@@ -116,15 +122,43 @@ async def api_post_helper(url, user_ids_list):
                 status_code = response.status
                 if status_code != st.HTTP_200_OK:
                     raise HTTPException(
-                        reason=body['detail'],
+                        status_code=status_code,
+                        detail=body['detail'],
                         headers={"WWW-Authenticate": "Bearer"},
                     )
                 return body
     except ConnectionRefusedError as err:
-        raise HTTPException(reason=err.strerror)
+        raise HTTPException(status_code=status_code,
+                            detail=err.strerror)
     except aiohttp.ServerTimeoutError as err:
-        raise HTTPException(reason=err.strerror)
+        raise HTTPException(status_code=status_code,
+                            detail=err.strerror)
     except aiohttp.TooManyRedirects as err:
-        raise HTTPException(reason=err.strerror)
+        raise HTTPException(status_code=status_code,
+                            detail=err.strerror)
     except aiohttp.ClientError as err:
-        raise HTTPException(reason=err.strerror)
+        raise HTTPException(status_code=status_code,
+                            detail=err.strerror)
+
+
+async def get_notification_history_helper(db_conn: DbHelpers,
+                                          user_id: str,
+                                          page: int,
+                                          size: int):
+    """
+    Get notifications history from DB
+    :param db_conn: Relation DB
+    :param user_id:
+    :param page:
+    :param size:
+    :return:
+    """
+    # Get notification from db
+    try:
+        data = await db_conn.select(NotificationsHistory,
+                                    NotificationsHistory.user_id == user_id,
+                                    page,
+                                    size)
+        return data
+    except SQLAlchemyError as err:
+        raise db_bad_request(err)

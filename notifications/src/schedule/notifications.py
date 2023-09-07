@@ -129,7 +129,7 @@ async def process_initiated_notifications():
                 content_id: str = notification_dict['content_id']
                 content = await conn.select(
                     NotificationContent,
-                    NotificationContent.id.like(content_id))
+                    NotificationContent.id == content_id)
                 content = content.scalar_one()
 
                 # Produce message to the queue
@@ -204,7 +204,7 @@ async def process_consumed_notifications():
 
             message = await conn.select(
                 model=NotificationContent,
-                filter_=NotificationContent.id.like(content_id))
+                filter_=NotificationContent.id == content_id)
             message = message.scalar_one()
             body = ast.literal_eval(message.content)
 
