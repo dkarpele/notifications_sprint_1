@@ -39,6 +39,7 @@ class Email(AbstractMessage):
             logging.info(f'Sendgrid message body: {response.body}')
             logging.info(f'Sendgrid headers:\n {response.headers}')
             await self.change_db_status(correlation_id)
+            await self.add_notifications_history(data['id'], data['email'], template_data)
         except Exception as e:
             logging.error(e)
 
@@ -70,5 +71,6 @@ class Email(AbstractMessage):
                 logging.info(f'Sendgrid message body: {response.body}')
                 logging.info(f'Sendgrid headers:\n {response.headers}')
                 await self.change_db_status(correlation_id)
+                await self.add_notifications_history(user_id, to_email, template_data)
             except Exception as e:
                 logging.error(e)
