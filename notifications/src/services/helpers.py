@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import aiohttp
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 from sqlalchemy import Result, and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -98,16 +98,16 @@ async def api_get_helper(url: str,
                     )
                 return body
     except ConnectionRefusedError as err:
-        raise HTTPException(status_code=status_code,
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=err.strerror)
     except aiohttp.ServerTimeoutError as err:
-        raise HTTPException(status_code=status_code,
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=err.strerror)
     except aiohttp.TooManyRedirects as err:
-        raise HTTPException(status_code=status_code,
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=err.strerror)
     except aiohttp.ClientError as err:
-        raise HTTPException(status_code=status_code,
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=err.strerror)
 
 
@@ -128,16 +128,16 @@ async def api_post_helper(url, user_ids_list):
                     )
                 return body
     except ConnectionRefusedError as err:
-        raise HTTPException(status_code=status_code,
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=err.strerror)
     except aiohttp.ServerTimeoutError as err:
-        raise HTTPException(status_code=status_code,
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=err.strerror)
     except aiohttp.TooManyRedirects as err:
-        raise HTTPException(status_code=status_code,
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=err.strerror)
     except aiohttp.ClientError as err:
-        raise HTTPException(status_code=status_code,
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=err.strerror)
 
 

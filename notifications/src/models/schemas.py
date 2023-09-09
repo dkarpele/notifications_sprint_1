@@ -1,14 +1,11 @@
 import uuid
 from datetime import datetime
 
-from passlib.context import CryptContext
 from sqlalchemy import Column, DateTime, String, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from db.postgres import Base
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class Notification(Base):

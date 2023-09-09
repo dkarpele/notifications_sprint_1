@@ -1,3 +1,4 @@
+import logging
 import os
 from logging import config as logging_config
 
@@ -48,10 +49,12 @@ class RabbitCreds(MainConf):
     rabbit_pass: str = Field(..., env="RABBIT_PASS")
 
     def get_amqp_uri(self):
-        return f"amqp://{self.rabbit_user}"\
+        url = f"amqp://{self.rabbit_user}"\
                 f":{self.rabbit_pass}"\
                 f"@{self.rabbit_host}"\
                 f":{self.rabbit_port}/"
+        logging.info(f'Trying to connect to {url}')
+        return url
 
 
 amqp_settings = RabbitCreds()

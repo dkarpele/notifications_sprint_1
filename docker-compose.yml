@@ -41,6 +41,7 @@ services:
     depends_on:
       - postgres
       - rabbitmq
+    entrypoint: ${APP_HOME}/entrypoint.sh
 
   nginx:
     image: nginx:latest
